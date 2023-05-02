@@ -1,0 +1,353 @@
+import { extendType, idArg, inputObjectType, nonNull, stringArg } from 'nexus';
+import bcrypt from 'bcryptjs';
+import { prisma, pubsub } from '../../../../server.js';
+import signature from 'jsonwebtoken';
+import { GraphQLError } from 'graphql/index.mjs';
+import { GESend } from '../../helpers/email.js';
+const { sign, verify } = signature;
+export const userInputType = inputObjectType({
+    name: "AuthInput",
+    definition(t) {
+        t.email("email");
+        t.string("password");
+    },
+});
+export const userMutation = extendType({
+    type: "Mutation",
+    definition(t) {
+        t.field("createAdministrator", {
+            type: "user",
+            args: { companyName: nonNull(stringArg()), Auth: "AuthInput", Profile: "ProfileInput" },
+            resolve: async (_, { companyName, Auth: { email, password }, Profile: { firstname, lastname, birthday, phone } }) => {
+                const pass = await bcrypt.hash(password, 12);
+                return await prisma.$transaction(async () => {
+                    const user = await prisma.user.create({
+                        data: {
+                            email, password: pass,
+                            role: "administrator",
+                            createdAt: new Date(Date.now()), updatedAt: new Date(Date.now()),
+                            Company: {
+                                create: {
+                                    companyName,
+                                },
+                            }
+                        },
+                    });
+                    await prisma.profile.create({
+                        data: {
+                            firstname, lastname, phone, birthday, User: {
+                                connect: {
+                                    userID: user.userID
+                                },
+                            },
+                        }
+                    });
+                    pubsub.publish("createUser", user);
+                    return user;
+                });
+            }
+        });
+        // admin side
+        t.field("createAccount", {
+            type: "user",
+            args: {
+                auth: "AuthInput", role: nonNull(stringArg()), Profile: "ProfileInput", companyName: stringArg()
+            },
+            resolve: async (_, { auth: { email, password }, Profile: { firstname, lastname, birthday, phone }, role, companyName }, { req }) => {
+                const token = req.cookies["ghs_access_token"];
+                const { userID, role: roles } = verify(token, "HeadStart");
+                if (userID && roles === "administrator") {
+                    const pass = await bcrypt.hash(password, 12);
+                    const users = await prisma.user.findUnique({
+                        where: {
+                            userID
+                        },
+                        include: {
+                            Company: true,
+                            Profile: true
+                        }
+                    });
+                    if (users.email === email) {
+                        throw new GraphQLError("Email address has already been used.");
+                    }
+                    if (role === "employer") {
+                        const en = await prisma.user.create({
+                            data: {
+                                email, password: pass, role: role,
+                                Profile: {
+                                    create: {
+                                        firstname, lastname, birthday, phone
+                                    }
+                                },
+                                Company: {
+                                    create: {
+                                        companyName
+                                    }
+                                },
+                                createdAt: new Date(Date.now()), updatedAt: new Date(Date.now()),
+                            }
+                        });
+                        await prisma.logs.create({
+                            data: {
+                                createdAt: new Date(Date.now()),
+                                modifiedBy: `${users.Profile.firstname} ${users.Profile.lastname}`,
+                                title: "Created new User",
+                                User: {
+                                    connect: {
+                                        userID
+                                    }
+                                }
+                            },
+                        });
+                        return en;
+                    }
+                    else {
+                        const en = await prisma.user.create({
+                            data: {
+                                email, password: pass, role: role,
+                                Profile: {
+                                    create: {
+                                        firstname, lastname, birthday, phone
+                                    }
+                                },
+                                Company: {
+                                    connect: {
+                                        companyID: users.companyID
+                                    }
+                                },
+                                createdAt: new Date(Date.now()), updatedAt: new Date(Date.now()),
+                            }
+                        });
+                        await prisma.logs.create({
+                            data: {
+                                createdAt: new Date(Date.now()),
+                                modifiedBy: `${users.Profile.firstname} ${users.Profile.lastname}`,
+                                title: "Created new User",
+                                User: {
+                                    connect: {
+                                        userID
+                                    }
+                                }
+                            },
+                        });
+                        return en;
+                    }
+                }
+            }
+        });
+        t.field("login", {
+            type: "token",
+            args: { Auth: "AuthInput", pin: nonNull(stringArg()) },
+            resolve: async (_, { Auth: { email, password }, pin }, { res }) => {
+                const user = await prisma.user.findUnique({
+                    where: {
+                        email
+                    },
+                    include: {
+                        Profile: true
+                    }
+                });
+                if (!user)
+                    throw new GraphQLError("Email address is not found");
+                const valid = await bcrypt.compare(password, user.password);
+                if (!valid)
+                    throw new GraphQLError("Invalid Credentials");
+                if (user.pin !== pin)
+                    throw new GraphQLError("PIN Mismatch");
+                const token = sign({ userID: user.userID, role: user.role }, "HeadStart", {
+                    algorithm: "HS512",
+                    expiresIn: "7d",
+                    noTimestamp: false,
+                });
+                const accessToken = sign({ userID: user.userID, role: user.role }, "HeadStart", {
+                    algorithm: "HS512",
+                    expiresIn: "7d",
+                    noTimestamp: false,
+                });
+                res.cookie("ghs_access_token", accessToken, {
+                    httpOnly: false,
+                    sameSite: "none",
+                    secure: true
+                });
+                await prisma.logs.create({
+                    data: {
+                        title: "Logged in",
+                        modifiedBy: `${user.Profile.firstname} ${user.Profile.lastname}`,
+                        User: {
+                            connect: {
+                                userID: user.userID
+                            }
+                        },
+                        createdAt: new Date(Date.now()),
+                    }
+                });
+                return { token };
+            }
+        });
+        t.field("changePin", {
+            type: "user",
+            args: { pin: nonNull(stringArg()), rePin: nonNull(stringArg()), userID: nonNull(idArg()) },
+            resolve: async (_, { userID, pin, rePin }) => {
+                if (rePin !== pin)
+                    throw new GraphQLError("Pin matched.");
+                return await prisma.user.update({
+                    where: { userID },
+                    data: {
+                        pin
+                    }
+                });
+            }
+        });
+        t.field("updateAllContentUserProfile", {
+            type: "user",
+            args: { userID: nonNull(idArg()), profile: "ProfileInput", email: "EmailAddress", Address: "AddressInput" },
+            resolve: async (_, { profile: { birthday, firstname, lastname, phone }, email, userID, Address: { city, province, street, zipcode } }) => {
+                return await prisma.$transaction(async () => {
+                    const user = await prisma.user.update({
+                        data: {
+                            email,
+                            updatedAt: new Date(Date.now()),
+                            Profile: {
+                                update: {
+                                    firstname, birthday, lastname, phone,
+                                    Address: {
+                                        upsert: {
+                                            create: {
+                                                city, province, street, zipcode
+                                            },
+                                            update: {
+                                                city, province, street, zipcode
+                                            }
+                                        }
+                                    }
+                                },
+                            },
+                        },
+                        where: {
+                            userID
+                        },
+                        include: {
+                            Profile: true
+                        }
+                    });
+                    await prisma.logs.create({
+                        data: {
+                            title: "Profile Update",
+                            createdAt: new Date(Date.now()),
+                            modifiedBy: `${user.Profile.firstname} ${user.Profile.lastname}`,
+                            User: {
+                                connect: {
+                                    userID: userID
+                                }
+                            }
+                        }
+                    });
+                    return user;
+                });
+            }
+        });
+        t.field("updatePassword", {
+            type: "user",
+            args: { userID: nonNull(idArg()) },
+            resolve: async (_, { userID }, { req }) => {
+                const token = req.cookies['ghs_access_token'];
+                const { userID: userIds, role } = verify(token, "HeadStart");
+                if (userIds && role === "administrator" || "manager") {
+                    const findUser = await prisma.user.findUnique({
+                        where: {
+                            userID: userIds
+                        },
+                        include: {
+                            Profile: true
+                        }
+                    });
+                    const resetUserpass = await prisma.user.findUnique({
+                        where: {
+                            userID
+                        },
+                        include: {
+                            Profile: true
+                        }
+                    });
+                    const pass = await bcrypt.hash(new Date(resetUserpass.Profile.birthday).toISOString().slice(0, 10).replaceAll("-", ""), 12);
+                    return prisma.$transaction(async () => {
+                        const userPass = await prisma.user.update({
+                            where: { userID },
+                            data: {
+                                password: pass,
+                                updatedAt: new Date(Date.now())
+                            },
+                            include: {
+                                Profile: true
+                            }
+                        });
+                        GESend(userPass.email, `Dear Mr./Ms./Mrs. <b>${userPass.Profile.lastname}</b>,<br><br>Your password has been successfully reset. Your temporary password is your birth date with the <b>YYYYMMDD</b> format. <br><br>For security reason, kindly change your password upon logging into your account.<br><br><br>If you have any further questions or if there is anything else we can help you with, please let us know by reaching out to us via (02) 8-298-4313.<br><br><br>Regards, <br><br><b>Global Headstart Specialist Inc.</b>`, "Password Reset");
+                        await prisma.logs.create({
+                            data: {
+                                title: "Changed Password",
+                                modifiedBy: `${findUser.Profile.firstname} ${findUser.Profile.lastname}`,
+                                createdAt: new Date(Date.now()),
+                                User: {
+                                    connect: {
+                                        userID
+                                    }
+                                }
+                            }
+                        });
+                        return userPass;
+                    });
+                }
+            }
+        });
+        t.field("updateUserPassword", {
+            type: "user",
+            args: {
+                password: nonNull(stringArg()), retype: nonNull(stringArg()), userID: nonNull(idArg())
+            },
+            resolve: async (_, { password, retype, userID }) => {
+                if (password !== retype)
+                    throw new GraphQLError("Password is not Matched");
+                const pass = await bcrypt.hash(password, 12);
+                const user = await prisma.user.update({
+                    data: {
+                        password: pass
+                    },
+                    where: {
+                        userID
+                    },
+                    include: {
+                        Profile: true
+                    }
+                });
+                await prisma.logs.create({
+                    data: {
+                        title: "You Changed your password",
+                        createdAt: new Date(Date.now()),
+                        modifiedBy: `${user.Profile.firstname} ${user.Profile.lastname}`,
+                        User: {
+                            connect: {
+                                userID
+                            }
+                        }
+                    }
+                });
+                return user;
+            }
+        });
+        t.field("deleteUser", {
+            type: "user",
+            args: { userID: nonNull(idArg()) },
+            resolve: async (_, { userID }, { req }) => {
+                const token = req.cookies["ghs_access_token"];
+                const { userID: usersID, role } = verify(token, "HeadStart");
+                if (usersID && role === "administrator" || "manager") {
+                    return await prisma.user.delete({
+                        where: {
+                            userID
+                        }
+                    });
+                }
+            }
+        });
+    },
+});
