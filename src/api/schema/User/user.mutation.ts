@@ -178,17 +178,10 @@ export const userMutation = extendType({
                 const token = sign({ userID: user.userID, role: user.role }, "HeadStart", {
                     algorithm: "HS512",
                     expiresIn: "7d",
-                    noTimestamp: false,
                 })
 
 
-                const accessToken = sign({ userID: user.userID, role: user.role }, "HeadStart", {
-                    algorithm: "HS512",
-                    expiresIn: "7d",
-                    noTimestamp: false,
-                })
-
-                res.cookie("ghs_access_token", accessToken, {
+                res.cookie("ghs_access_token", token, {
                     httpOnly: false,
                     sameSite: "none",
                     secure: true

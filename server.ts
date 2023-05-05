@@ -77,7 +77,7 @@ export const startApolloServer = async () => {
     await server.start()
 
     app.use("/graphql", cors<cors.CorsRequest>({
-        origin: [ "http://localhost:3000", "https://studio.apollographql.com", "https://ghs-career.vercel.app" ],
+        origin: [ "http://localhost:3000", "https://studio.apollographql.com", "https://ghs-career.vercel.app", ],
         credentials: true,
     }), json(), expressMiddleware(server, {
         context: async ({ req, res }) => ({ req, res })
