@@ -10,13 +10,13 @@ import { google } from 'googleapis'
 **/
 
 const oAUth2Client = new google.auth.OAuth2({
-    clientId: "323850014625-9bkvkgdb48jr6lctd9oam93mnegsjoeg.apps.googleusercontent.com", // ClientID 
+    clientId: "3323850014625-9bkvkgdb48jr6lctd9oam93mnegsjoeg.apps.googleusercontent.com", // ClientID 
     clientSecret: "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",
     redirectUri: "https://developers.google.com/oauthplayground"
 })
 
 
-oAUth2Client.setCredentials({ refresh_token: "1//04k3t7H0QzLfhCgYIARAAGAQSNwF-L9IrzOSIthKv6sBgaB74yqloWf0R-yRkTgINk3BMOrz21L2ZQRCmQH5fTEIRuv1qMXsqV-k" })
+oAUth2Client.setCredentials({ refresh_token: "1//04qimpdXIQftQCgYIARAAGAQSNwF-L9Ir-OLImyaBd1x9cDGUGCJ6GxXmtH10xRh1MsIkj6IkcJbdmkWmxpiTjUCfgSx3hvy38Yo" })
 export async function GESend(Email: string, message: string, subject: string) {
     let accounts = nodemailer.createTransport({
         service: "gmail",
@@ -25,8 +25,8 @@ export async function GESend(Email: string, message: string, subject: string) {
             user: "gspecialistinc@gmail.com", //gmail account you useds to set the project up in google cloud console.
             clientId: "323850014625-9bkvkgdb48jr6lctd9oam93mnegsjoeg.apps.googleusercontent.com", // ClientID 
             clientSecret: "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", // Client Secret
-            refreshToken: "1//04k3t7H0QzLfhCgYIARAAGAQSNwF-L9IrzOSIthKv6sBgaB74yqloWf0R-yRkTgINk3BMOrz21L2ZQRCmQH5fTEIRuv1qMXsqV-k", // Refresh Token
-            accessToken: "ya29.a0AWY7Ckljugt-NOTaQzOSuptcUGpmfKP6l3_N-4DIr9Uwev190b4Noruwlih_UMsb58_X0RobGjzCQtFgGKe3fqbswOzv2VFJVSXjrTo3hm-qvTkyUkhQzokmCjaC13ZC1XBKIEzyj5IORusfu7-xqai09YH9aCgYKAZcSARISFQG1tDrpukSTLtNadTmT6iD8ZKLLGA0163" // Access Token Variable we defined earlier
+            refreshToken: "1//04qimpdXIQftQCgYIARAAGAQSNwF-L9Ir-OLImyaBd1x9cDGUGCJ6GxXmtH10xRh1MsIkj6IkcJbdmkWmxpiTjUCfgSx3hvy38Yo", // Refresh Token
+            accessToken: "ya29.a0AWY7CkkjaL2AlkjhVos6LNeQCGSIxwPnp-xEGIoN_HJ1RbGcCln7nr5OxwmHDaN7NsY-OW17LhHUfGq_M45V8hOUQMmZqGL-oWEaFvTc2tHn0v0n91LD5Y1hpCfPEUBS5TriTiXrOwFJZ598_fpYkycz1E0YaCgYKAbISARISFQG1tDrpi95Z5E_dwfTvfMigGYwa_A0163" // Access Token Variable we defined earlier
         }
     })
 
@@ -49,8 +49,8 @@ export async function Recipient(Email: string, message: string, subject: string)
             user: "gspecialistinc@gmail.com", //gmail account you useds to set the project up in google cloud console.
             clientId: "323850014625-9bkvkgdb48jr6lctd9oam93mnegsjoeg.apps.googleusercontent.com", // ClientID 
             clientSecret: "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", // Client Secret
-            refreshToken: "1//04k3t7H0QzLfhCgYIARAAGAQSNwF-L9IrzOSIthKv6sBgaB74yqloWf0R-yRkTgINk3BMOrz21L2ZQRCmQH5fTEIRuv1qMXsqV-k", // Refresh Token
-            accessToken: "ya29.a0AWY7Ckljugt-NOTaQzOSuptcUGpmfKP6l3_N-4DIr9Uwev190b4Noruwlih_UMsb58_X0RobGjzCQtFgGKe3fqbswOzv2VFJVSXjrTo3hm-qvTkyUkhQzokmCjaC13ZC1XBKIEzyj5IORusfu7-xqai09YH9aCgYKAZcSARISFQG1tDrpukSTLtNadTmT6iD8ZKLLGA0163" // Access Token Variable we defined earlier
+            refreshToken: "1//04qimpdXIQftQCgYIARAAGAQSNwF-L9Ir-OLImyaBd1x9cDGUGCJ6GxXmtH10xRh1MsIkj6IkcJbdmkWmxpiTjUCfgSx3hvy38Yo", // Refresh Token
+            accessToken: "ya29.a0AWY7CkkjaL2AlkjhVos6LNeQCGSIxwPnp-xEGIoN_HJ1RbGcCln7nr5OxwmHDaN7NsY-OW17LhHUfGq_M45V8hOUQMmZqGL-oWEaFvTc2tHn0v0n91LD5Y1hpCfPEUBS5TriTiXrOwFJZ598_fpYkycz1E0YaCgYKAbISARISFQG1tDrpi95Z5E_dwfTvfMigGYwa_A0163" // Access Token Variable we defined earlier
         }
     })
 
