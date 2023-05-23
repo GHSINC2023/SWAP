@@ -13,6 +13,12 @@ CREATE TYPE "notificationStatus" AS ENUM ('read', 'unread');
 -- CreateEnum
 CREATE TYPE "endorseStatus" AS ENUM ('waiting', 'declined', 'approved');
 
+-- CreateEnum
+CREATE TYPE "archiveStatus" AS ENUM ('unarchive', 'archive');
+
+-- CreateEnum
+CREATE TYPE "archiveType" AS ENUM ('post', 'endorsed', 'applicant');
+
 -- CreateTable
 CREATE TABLE "OTP" (
     "OTPID" TEXT NOT NULL,
@@ -35,6 +41,16 @@ CREATE TABLE "User" (
     "pin" TEXT NOT NULL DEFAULT '0000',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("userID")
+);
+
+-- CreateTable
+CREATE TABLE "Archive" (
+    "archiveID" TEXT NOT NULL,
+    "status" "archiveStatus" NOT NULL,
+    "type" "archiveType" NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Archive_pkey" PRIMARY KEY ("archiveID")
 );
 
 -- CreateTable
@@ -109,8 +125,8 @@ CREATE TABLE "Comment" (
     "commentID" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "notes" TEXT NOT NULL,
-    "createdAt" TIMESTAMP NOT NULL,
-    "updatedAt" TIMESTAMP NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Comment_pkey" PRIMARY KEY ("commentID")
 );
@@ -133,6 +149,7 @@ CREATE TABLE "Endorse" (
     "endorseStatus" "endorseStatus" NOT NULL DEFAULT 'waiting',
     "userID" TEXT NOT NULL,
     "createdAt" TIMESTAMP NOT NULL,
+    "archiveID" TEXT,
 
     CONSTRAINT "Endorse_pkey" PRIMARY KEY ("endorseID")
 );
@@ -170,6 +187,7 @@ CREATE TABLE "Applicant" (
     "interviewerID" TEXT,
     "endorsementID" TEXT,
     "notificaitonID" TEXT,
+    "archiveID" TEXT,
 
     CONSTRAINT "Applicant_pkey" PRIMARY KEY ("applicantID")
 );
@@ -208,6 +226,7 @@ CREATE TABLE "JobPost" (
     "companyID" TEXT NOT NULL,
     "notificationID" TEXT,
     "userID" TEXT NOT NULL,
+    "archiveID" TEXT,
 
     CONSTRAINT "JobPost_pkey" PRIMARY KEY ("jobPostID")
 );
@@ -361,6 +380,9 @@ ALTER TABLE "Endorsement" ADD CONSTRAINT "Endorsement_userID_fkey" FOREIGN KEY (
 ALTER TABLE "Endorse" ADD CONSTRAINT "Endorse_userID_fkey" FOREIGN KEY ("userID") REFERENCES "User"("userID") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Endorse" ADD CONSTRAINT "Endorse_archiveID_fkey" FOREIGN KEY ("archiveID") REFERENCES "Archive"("archiveID") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Feedback" ADD CONSTRAINT "Feedback_applicantID_fkey" FOREIGN KEY ("applicantID") REFERENCES "Applicant"("applicantID") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -385,6 +407,9 @@ ALTER TABLE "Applicant" ADD CONSTRAINT "Applicant_endorsementID_fkey" FOREIGN KE
 ALTER TABLE "Applicant" ADD CONSTRAINT "Applicant_notificaitonID_fkey" FOREIGN KEY ("notificaitonID") REFERENCES "Notification"("notificationID") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Applicant" ADD CONSTRAINT "Applicant_archiveID_fkey" FOREIGN KEY ("archiveID") REFERENCES "Archive"("archiveID") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Screening" ADD CONSTRAINT "Screening_applicantID_fkey" FOREIGN KEY ("applicantID") REFERENCES "Applicant"("applicantID") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -401,6 +426,9 @@ ALTER TABLE "JobPost" ADD CONSTRAINT "JobPost_notificationID_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "JobPost" ADD CONSTRAINT "JobPost_userID_fkey" FOREIGN KEY ("userID") REFERENCES "User"("userID") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JobPost" ADD CONSTRAINT "JobPost_archiveID_fkey" FOREIGN KEY ("archiveID") REFERENCES "Archive"("archiveID") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "JobDetails" ADD CONSTRAINT "JobDetails_jobPostID_fkey" FOREIGN KEY ("jobPostID") REFERENCES "JobPost"("jobPostID") ON DELETE CASCADE ON UPDATE CASCADE;

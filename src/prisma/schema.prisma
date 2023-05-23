@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = "postgres://tkwysyenewrirm:e8ae520fdb2685291f9af012d08ef9ff244a11c911e2c869188943adcaaa11db@ec2-54-208-11-146.compute-1.amazonaws.com:5432/d5qi1re8r7k8hv"
 }
 
 model OTP {

@@ -22,7 +22,7 @@ export async function GESend(Email: string, message: string, subject: string) {
         service: "gmail",
         auth: {
             type: "OAuth2",
-            user: "dinotech26013@gmail.com", //gmail account you useds to set the project up in google cloud console.
+            user: "gspecialistinc@gmail.com", //gmail account you useds to set the project up in google cloud console.
             clientId: "323850014625-9bkvkgdb48jr6lctd9oam93mnegsjoeg.apps.googleusercontent.com", // ClientID 
             clientSecret: "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", // Client Secret
             refreshToken: "1//04k3t7H0QzLfhCgYIARAAGAQSNwF-L9IrzOSIthKv6sBgaB74yqloWf0R-yRkTgINk3BMOrz21L2ZQRCmQH5fTEIRuv1qMXsqV-k", // Refresh Token
@@ -32,7 +32,7 @@ export async function GESend(Email: string, message: string, subject: string) {
 
 
     await accounts.sendMail({
-        from: "dinotech26013@gmail.com",
+        from: "gspecialistinc@gmail.com",
         to: Email,
         subject: subject,
         html: message,
